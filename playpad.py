@@ -6,7 +6,7 @@ s.start()
 
 f = s.getSamplingRate() / 262144
 
-move = LinTable([(0, 2.), (8191, 0.2)])
+move = LinTable([(0, 4.), (8192 // 8, 0.2), (8192 // 8 * 7, 0.2), (8191, 4)])
 bend = TableRead(table=move, freq=1/10, loop=True).play()
 
 t = PadSynthTable(basefreq=50, spread=1.5, bw=10., bwscl=1., nharms=128, damp=0.7, size=262144)

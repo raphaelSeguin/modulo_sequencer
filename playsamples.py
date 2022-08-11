@@ -22,6 +22,38 @@ lfo = Sine(freq=0.13, mul=0.012, add=0.013)
 lfo2 = LFO(freq=5, sharp=0.5, type=6, mul=0.01, add=0.011)
 delay = Delay(player, delay=lfo+lfo2, feedback=0.5, maxdelay=1, mul=1, add=0).out()
 
+###############
+env = Adsr(attack=0.0001, decay=0.1, sustain=0.2, release=.5, dur=0.5, mul=0.1)
+osc = RCOsc(freq=[200, 200], mul=env).out(0)
+
+class Patternalist():
+    def __init__(self):
+        self.time = 0
+        self._rightFreq = 0
+        self._leftFreq = 0
+    
+    def tick(self):
+        self.time += 1
+
+    def leftFreq(self):
+        if self.time % 11 == 0: 
+            self._leftFreq = 23
+        self._leftFreq = self._leftFreq * 3/2 if self._leftFreq < 2000 else self._leftFreq - 1800
+        return self._leftFreq
+
+    def rightFreq(self):
+        if self.time % 13 == 0: 
+            self._rightFreq = 19
+        self._rightFreq = self._rightFreq * 5/3 if self._rightFreq < 2000 else self._rightFreq - 1800
+        return self._rightFreq
+
+pouet = Patternalist()
+
+def event():
+    osc.freq = [ pouet.leftFreq(), pouet.rightFreq() ]
+    pouet.tick()
+    if pouet.time % 7 != 0: env.play()
+
 def delayTypeGenerator():
     while True:
         for val in [0, 4, 6]:
@@ -58,8 +90,11 @@ def bump():
         stepTime = initStepTime
     pat.time = stepTime
 
+def together():
+    bump()
+    event()
 
-pat = Pattern(function=bump, time=stepTime)
+pat = Pattern(function=together, time=stepTime)
 pat.play()
 
 server.gui(locals())

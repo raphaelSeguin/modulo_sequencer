@@ -3,6 +3,7 @@ from pyo import *
 import wx
 
 from percs import Kick, Snare, HiHat, CowBell, Tom, Cym
+from views import SequencerView, PatternMixer
 
 # serialize -> yml -> restore
 
@@ -16,15 +17,8 @@ class Interface(wx.Frame):
         colWidth = 50
         linHeight = 25
         cols = 8
-        self.patternChoiceA = wx.Choice(self, id=wx.ID_ANY, pos=(80 + 8*colWidth, 0), size=wx.DefaultSize,
-            choices=[str(n) for n in range(10)], style=0, name="")
-        self.patternChoiceB = wx.Choice(self, id=wx.ID_ANY, pos=(80 + 9*colWidth, 0), size=wx.DefaultSize,
-            choices=[str(n) for n in range(10)], style=0, name="")
-        self.patternCrossfader = wx.Slider(self, id=wx.ID_ANY, value=20, minValue=0, maxValue=100,
-                pos=(80 + 8*colWidth, 25), size=(80, 20), style=wx.SL_HORIZONTAL,
-                name="")
         instLabels = ('k', 'sn', 'hh', 'cb', 'ht', 'mt', 'lt', 'cym')
-        self.instLables = [
+        self.instLabels = [
             wx.StaticText(self, id=n, label=instLabels[n], pos=(80 + n * colWidth, 0), size=(50, 20), style=0, name="")
             for n, label in enumerate(instLabels)
         ]
@@ -35,38 +29,10 @@ class Interface(wx.Frame):
                 size=(50, 20), style=0, name="")
             for n in range(len(labels))
         ]
-        self.numbers = [ 
-            wx.SpinCtrl(self, 
-                id=row+col*10,
-                pos=(80 + col*colWidth, 50 + row*linHeight),
-                size=(colWidth, 25),
-                style=wx.SP_ARROW_KEYS,
-                min=0,
-                max=64,
-                initial=defaultValues[row],
-                name="wxSpinCtrlDouble_{row}_{col}".format(row=row, col=col)) 
-            for row in range(9)
-            for col in range(cols)
-        ]
-        [ number.Bind(wx.EVT_SPINCTRL, self.handleNumber) for number in self.numbers ]
-        self.muteButtons = [
-            wx.ToggleButton(
-                self,
-                id=7+(col+1)*100,
-                label="",
-                pos=(80 + col*colWidth, 50 + 9*linHeight),
-                size=(50, 20),
-            )
-            for col in range(cols)
-        ]
-        [ muteButton.SetValue(1) for muteButton in self.muteButtons ]
-        [ muteButton.Bind(wx.EVT_TOGGLEBUTTON, self.handleMuteButtons) for muteButton in self.muteButtons ]
-        self.faders = [
-            wx.Slider(self, id=wx.ID_ANY, value=20, minValue=0, maxValue=100,
-                pos=(80 + col*colWidth, 50 + 10*linHeight), size=(colWidth, 100), style=wx.SL_VERTICAL,
-                name="")
-            for col in range(cols)
-        ]
+
+        self.sequencerViews = [ SequencerView(self, pos=(80+n*50, 50)) for n in range(10) ]
+        self.patternMixer = PatternMixer(self, pos=(800, 0))
+
         self.callbacks = {}
 
     def handleNumber(self, event):
@@ -99,22 +65,22 @@ class ModuloSequencer():
         self.offset = value
 
     def setMaskModulos(self, n, value):
-        print("setMaskModulos", n, value)
+        # print("setMaskModulos", n, value)
         self.maskModulos[n] = value
 
     def setMaskLength(self, value):
-        print("setMaskLength", value)
+        # print("setMaskLength", value)
         self.maskLength = value
 
     def setMaskOffset(self, value):
-        print("setMaskOffset", value)
+        # print("setMaskOffset", value)
         self.maskOffset = value
 
     def setStep(self, value):
         self.step = value
     
     def setMuted(self, value):
-        print("muted", value)
+        # print("muted", value)
         self.muted = value
 
     @property
@@ -166,22 +132,30 @@ class Controller():
         self.interface.Show()
         sequencersNumber = 8
         self.sequencers = [ ModuloSequencer() for n in range(sequencersNumber) ]
-        [ self.interface.bind(0 + num + seq*10, self.makeModuloSetter(seq, num)) for num in range(4) for seq in range(sequencersNumber) ]
-        [ self.interface.bind(4 + seq*10, self.makeOffsetSetter(seq)) for seq in range(sequencersNumber) ]
-        [ self.interface.bind(5 + num + seq*10, self.makeMaskModuloSetter(seq, num)) for num in range(2) for seq in range(sequencersNumber) ]
-        [ self.interface.bind(7 + seq*10, self.makeMaskLengthSetter(seq)) for seq in range(sequencersNumber) ]
-        [ self.interface.bind(8 + seq*10, self.makeMaskOffsetSetter(seq)) for seq in range(sequencersNumber) ]
-        [ self.interface.bind(7 + seq*100, self.makeMuteSetter(seq)) for seq in range(1, sequencersNumber+1) ]
-#
-#     ! ! ! ! !
-#
-        # for seq, button in enumerate(self.interface.muteButtons):
-        #     print(button)
-        #     button.Bind(wx.EVT_TOGGLEBUTTON, self.makeMuteSetter(seq))
-#
 
-#
+        for sequencerView, sequencer in zip(self.interface.sequencerViews, self.sequencers):
+            sequencerView.bindControl("modulo1", self.makeModuloSetter(sequencer, 0))
+            sequencerView.bindControl("modulo2", self.makeModuloSetter(sequencer, 1))
+            sequencerView.bindControl("modulo3", self.makeModuloSetter(sequencer, 2))
+            sequencerView.bindControl("modulo4", self.makeModuloSetter(sequencer, 3))
+            sequencerView.bindControl("offset", self.makeOffsetSetter(sequencer))
+            sequencerView.bindControl("maskModulo1", self.makeMaskModuloSetter(sequencer, 0))
+            sequencerView.bindControl("maskModulo2", self.makeMaskModuloSetter(sequencer, 1))
+            sequencerView.bindControl("maskLength", self.makeMaskLengthSetter(sequencer))
+            sequencerView.bindControl("maskOffset", self.makeMaskOffsetSetter(sequencer))
+    
+            sequencerView.bindMute(self.makeMuteSetter(sequencer))
+
         self.sounds = [ Kick(), Snare(), HiHat(), CowBell(), Tom(500), Tom(400), Tom(200), Cym() ]
+
+        self.mixer = Mixer(outs=2, chnls=8, time=0.025, mul=1, add=0)
+        for i, instrument in enumerate(self.sounds):
+            self.mixer.addInput(i, instrument)
+            self.mixer.setAmp(i, 0, 0.5)
+            self.mixer.setAmp(i, 1, 0.5)
+            instrument.out()
+
+        self.mixer.out()
 
         self.clock = Clock(bpm=150, divisor=4)
         self.clock.play()
@@ -189,38 +163,36 @@ class Controller():
     # modulos
     def makeModuloSetter(self, sequencer, moduloNumber):
         def moduloSetter(value):
-            self.sequencers[sequencer].setModulos(moduloNumber, value)
+            sequencer.setModulos(moduloNumber, value)
         return moduloSetter
     # offsets
     def makeOffsetSetter(self, sequencer):
         def offsetSetter(value):
-            self.sequencers[sequencer].setOffset(value)
+            sequencer.setOffset(value)
         return offsetSetter
-    # maskModulos
+
     def makeMaskModuloSetter(self, sequencer, moduloNumber):
         def maskModuloSetter(value):
-            self.sequencers[sequencer].setMaskModulos(moduloNumber, value)
+            sequencer.setMaskModulos(moduloNumber, value)
         return maskModuloSetter
-    # maskLength
+
     def makeMaskLengthSetter(self, sequencer):
         def maskLengthSetter(value):
-            self.sequencers[sequencer].setMaskLength(value)
+            sequencer.setMaskLength(value)
         return maskLengthSetter
-    # maskOffset
+
     def makeMaskOffsetSetter(self, sequencer):
         def maskOffsetSetter(value):
-            self.sequencers[sequencer].setMaskOffset(value)
+            sequencer.setMaskOffset(value)
         return maskOffsetSetter
-    # mutes
+
     def makeMuteSetter(self, sequencer):
         def muteSetter(value):
-            # print(sequencer, value)
-            self.sequencers[sequencer].setMuted(value)
+            sequencer.setMuted(value)
         return muteSetter
 
     def periodic(self, count):
-        # self.interface.stepDisplay.SetValue(str(count))
-        for i, sequencer in enumerate(self.sequencers): 
+        for i, sequencer in enumerate(self.sequencers):
             sequencer.setStep(count)
             if sequencer.trigger:
                 self.sounds[i].play()

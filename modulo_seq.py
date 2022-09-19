@@ -1,4 +1,4 @@
-import sys
+import sys, math
 from pyo import * 
 import wx
 
@@ -16,7 +16,6 @@ class Interface(wx.Frame):
         wx.Frame.__init__(self, None, id=-1, title="I", pos=(20, 50), size=(1200, 600))
         colWidth = 50
         linHeight = 25
-        cols = 8
         instLabels = ('k', 'sn', 'hh', 'cb', 'ht', 'mt', 'lt', 'cym')
         self.instLabels = [
             wx.StaticText(self, id=n, label=instLabels[n], pos=(80 + n * colWidth, 0), size=(50, 20), style=0, name="")
@@ -47,7 +46,6 @@ class Interface(wx.Frame):
     
     def bind(self, id, callback):
         self.callbacks[id] = callback
-
 
 class ModuloSequencer():
     def __init__(self):
@@ -125,7 +123,6 @@ class Clock():
         if self.callback:
             self.callback(self.count)
 
-
 class Controller():
     def __init__(self):
         self.interface = Interface()
@@ -145,14 +142,18 @@ class Controller():
             sequencerView.bindControl("maskOffset", self.makeMaskOffsetSetter(sequencer))
     
             sequencerView.bindMute(self.makeMuteSetter(sequencer))
+        
+        for track, sequencerView in enumerate(self.interface.sequencerViews):
+            sequencerView.fader.Bind(wx.EVT_SCROLL, self.makeMixerAmpSetter(track))
 
         self.sounds = [ Kick(), Snare(), HiHat(), CowBell(), Tom(500), Tom(400), Tom(200), Cym() ]
 
-        self.mixer = Mixer(outs=2, chnls=8, time=0.025, mul=1, add=0)
+        self.mixer = Mixer(outs=2, chnls=8, time=0.025, mul=0.1, add=0)
+
         for i, instrument in enumerate(self.sounds):
             self.mixer.addInput(i, instrument)
-            self.mixer.setAmp(i, 0, 0.5)
-            self.mixer.setAmp(i, 1, 0.5)
+            self.mixer.setAmp(i, 0, 0.1)
+            self.mixer.setAmp(i, 1, 0.1)
             instrument.out()
 
         self.mixer.out()
@@ -160,6 +161,17 @@ class Controller():
         self.clock = Clock(bpm=150, divisor=4)
         self.clock.play()
         self.clock.bind(self.periodic)
+
+        # self.faderMapper = SLMap(100, 0, scale='log')
+
+    def makeMixerAmpSetter (self, track):
+        def mixerAmpSetter(event):
+            db = (event.GetInt() * 0.01) * -30
+            amplitude = math.pow(10, db*0.05) if event.GetInt() != 100 else 0
+            self.mixer.setAmp(track, 0, amplitude)
+            self.mixer.setAmp(track, 1, amplitude)
+        return mixerAmpSetter
+
     # modulos
     def makeModuloSetter(self, sequencer, moduloNumber):
         def moduloSetter(value):
@@ -197,7 +209,10 @@ class Controller():
             if sequencer.trigger:
                 self.sounds[i].play()
 
+
+
 controller = Controller()
 
 app.MainLoop()
+
 sys.exit()

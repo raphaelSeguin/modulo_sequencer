@@ -11,7 +11,7 @@ def ping():
     global dispatch
     dispatch.send(144, 60, 127)
 
-pat = Pattern(function=ping, time=0.1)
+pat = Pattern(function=ping, time=0.5)
 pat.play()
 
 s.start()

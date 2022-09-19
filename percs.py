@@ -31,35 +31,11 @@ class Kick(PyoObject):
         self.oscillator = Sine(freq=self.pitchEnvelope, mul=self.amplitudeEnvelope)
         self._base_objs = self.oscillator.getBaseObjects()
 
-    # def setAttackFreq(self, value):
-    #     self.pitchEnvelope.set = Expseg(
-    #         [(0, attackFreq), (0.03, decayFreq), (0.5, releaseFreq)],
-    #         loop=False,
-    #         exp=10,
-    #         inverse=True,
-    #         initToFirstVal=False,
-    #         mul=1,
-    #         add=0,
-    #     )
-    #     self._attackFreq = value
-
-    # @property
-    # def attackFreq(self):
-    #     return self._attackFreq
-
-    # @attackFreq.setter
-    # def attackFreq(self, value):
-    #     self.setAttackFreq(value)
-
     def play(self, dur=0, delay=0):
+        self.oscillator.reset()
         self.pitchEnvelope.play(dur, delay)
         self.amplitudeEnvelope.play(dur, delay)
         return PyoObject.play(self, dur, delay)
-
-    def out(self, chnl=0, inc=1, dur=0, delay=0):
-        self.pitchEnvelope.play()
-        self.amplitudeEnvelope.play()
-        return PyoObject.out(self, chnl, inc, dur, delay)
 
 
 ##########

@@ -7,9 +7,10 @@ class Kick:
     def __init__(self):
         self.pitchEnvelope = Expseg([(0, 500), (0.03, 100), (0.5, 50)], loop=False, exp=10, inverse=True, initToFirstVal=False, mul=1, add=0)
         self.amplitudeEnvelope = Expseg([(0, 1), (0.05, 1), (0.5, 0)], loop=False, exp=10, inverse=True, initToFirstVal=False, mul=1, add=0)
-        
-    def play(self):
         self.oscillator = Sine(freq=self.pitchEnvelope, mul=self.amplitudeEnvelope).mix(2).out()
+
+    def play(self):
+        self.oscillator.reset()
         self.pitchEnvelope.play()
         self.amplitudeEnvelope.play()
 

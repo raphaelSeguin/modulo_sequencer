@@ -22,7 +22,6 @@ lfo = Sine(freq=0.13, mul=0.012, add=0.013)
 lfo2 = LFO(freq=5, sharp=0.5, type=6, mul=0.01, add=0.011)
 delay = Delay(player, delay=lfo+lfo2, feedback=0.5, maxdelay=1, mul=1, add=0).out()
 
-###############
 env = Adsr(attack=0.0001, decay=0.1, sustain=0.2, release=.5, dur=0.5, mul=0.1)
 osc = RCOsc(freq=[200, 200], mul=env).out(0)
 
